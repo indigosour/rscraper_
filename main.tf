@@ -9,17 +9,7 @@ resource "azurerm_resource_group" "rscraper" {
 
 data "azurerm_storage_account" "rscraper" {
   name                = var.storage_account_name
-  resource_group_name = "tube"
-}
-
-resource "azurerm_storage_share" "rscraper" {
-  name                 = "appstorage"
-  storage_account_name = azurerm_storage_account.rscraper.name
-  quota                = 5120
-  tier                 = "TransactionOptimized"
-  lifecycle {
-    prevent_destroy = true
-  }
+  resource_group_name = var.storage_account_rg
 }
 
 resource "azurerm_log_analytics_workspace" "rscraper" {
@@ -33,9 +23,9 @@ resource "azurerm_log_analytics_workspace" "rscraper" {
 resource "azurerm_container_app_environment_storage" "rscraper" {
   name                         = var.environment_name
   container_app_environment_id = azurerm_container_app_environment.rscraper.id
-  account_name                 = azurerm_storage_account.rscraper.name
-  share_name                   = azurerm_storage_share.rscraper.name
-  access_key                   = azurerm_storage_account.rscraper.primary_access_key
+  account_name                 = data.azurerm_storage_account.rscraper.name
+  share_name                   = "appstorage"
+  access_key                   = data.azurerm_storage_account.rscraper.primary_access_key
   access_mode                  = "ReadOnly"
 }
 
@@ -52,6 +42,8 @@ resource "azurerm_container_app" "rscraper" {
   revision_mode                = "Single"
 
   template {
+    max_replicas = 10
+    min_replicas = 0
     container {
       name   = "examplecontainerapp"
       image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
